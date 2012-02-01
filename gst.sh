@@ -36,12 +36,10 @@ debug="v4l2src:9,v4l2:9,fdsrc:4,fdsink:4,udpsink:3,mpegtsmux:4"
 	pipe="$v4lsrc num-buffers=190 ! $vidcap ! $tivid ! filesink location=a.264"
 }
 
-[ "$1" = "dum" ] && {
-	pipe="fdsrc blocksize=829440 num-buffers=100 ! $vidcap ! $tivid ! fakesink"
-	pre="./mycam 10 |"
+[ "$1" = "tiv4l" ] && {
+	debug="tiv4lsrc:9,fakesink:9,udpsrc:9"
+	pipe="tiv4lsrc num-buffers=20 ! fakesink"
 }
-
 echo $pipe
-
 gst-launch --gst-debug="$debug" $pipe 
 
