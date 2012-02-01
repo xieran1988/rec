@@ -118,190 +118,6 @@
 
 #include "tiv4l.h"
 
-typedef struct {
-	int index;
-	unsigned int length;
-	char *start;
-} capbuf_t;
-#define CAP_BUFCNT 3
-#define DEF_PIX_FMT		V4L2_PIX_FMT_UYVY
-static capbuf_t capbuf[CAP_BUFCNT];
-static int capfd;
-
-static int tiv4l_cam_exit(GstTiv4lSrc *src)
-{
-	int i;
-	GST_LOG_OBJECT(src, "closing\n");
-	for (i = 0; i < CAP_BUFCNT; i++) {
-		if ((void *)capbuf[i].start > (void *)0) {
-			munmap(capbuf[i].start,
-			       capbuf[i].length);
-		}
-	}
-	if (capfd)
-		close(capfd);
-	return 0;
-}
-
-static int tiv4l_cam_init(GstTiv4lSrc *src)
-{
-	int i, rt = 1;
-	struct v4l2_requestbuffers reqbuf;
-	struct v4l2_buffer buf;
-	struct v4l2_capability capability;
-	struct v4l2_input input;
-	struct v4l2_format fmt;
-
-retry:
-	capfd = open("/dev/video0", O_RDWR);
-	printf("capfd=%d\n", capfd);
-	if (capfd <= 0) {
-		GST_ERROR_OBJECT(src, "open dev failed\n");
-		return 1;
-	}
-
-	while (1) {
-		i = 0;
-		GST_LOG_OBJECT(src, "ioctl G_INPUT\n");
-		if (ioctl(capfd, VIDIOC_G_INPUT, &i) < 0) {
-			GST_ERROR_OBJECT(src, "error VIDIOC_G_INPUT, retry\n");
-			sleep(1);
-			continue;
-		}
-		GST_LOG_OBJECT(src, "G_INPUT idx: %d\n", i);
-		break;
-	}
-
-	memset(&input, 0, sizeof(input));
-	input.index = i;
-	if (ioctl(capfd, VIDIOC_ENUMINPUT, &input) < 0) {
-		GST_ERROR_OBJECT(src, "error VIDIOC_ENUMINPUT");
-		return 1;
-	}
-	GST_LOG_OBJECT(src, "input: %s\n", input.name);
-
-	if (ioctl(capfd, VIDIOC_QUERYCAP, &capability) < 0) {
-		GST_ERROR_OBJECT(src, "error VIDIOC_QUERYCAP");
-		return 1;
-	}
-	if (!(capability.capabilities & V4L2_CAP_STREAMING)) {
-		GST_ERROR_OBJECT(src, "Not capable of streaming\n");
-		return 1;
-	}
-
-	for (i = 0; ; i++) {
-		struct v4l2_fmtdesc fmtdesc = {};
-		fmtdesc.index = i;
-		fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		if (ioctl(capfd, VIDIOC_ENUM_FMT, &fmtdesc))
-			break;
-		GST_LOG_OBJECT(src, "fmt: %.32s\n", fmtdesc.description);
-	}
-
-	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	if (ioctl(capfd, VIDIOC_G_FMT, &fmt)) {
-		GST_ERROR_OBJECT(src, "error VIDIOC_G_FMT\n");
-		return 1;
-	}
-
-	fmt.fmt.pix.pixelformat = DEF_PIX_FMT;
-	if (ioctl(capfd, VIDIOC_S_FMT, &fmt)) {
-		GST_ERROR_OBJECT(src, "error VIDIOC_S_FMT\n");
-		return 1;
-	}
-
-	if (ioctl(capfd, VIDIOC_G_FMT, &fmt)) {
-		GST_ERROR_OBJECT(src, "error VIDIOC_G_FMT\n");
-		return 1;
-	}
-
-	GST_LOG_OBJECT(src, "getfmt.size %dx%d\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
-	GST_LOG_OBJECT(src, "want.size %dx%d\n", IMG_W, IMG_H);
-
-	if (!
-			((fmt.fmt.pix.width == IMG_W*2 && fmt.fmt.pix.height == IMG_H*2) || 
-			(fmt.fmt.pix.width == IMG_W && fmt.fmt.pix.height == IMG_H) )
-		 )	
-	{
-		GST_LOG_OBJECT(src, "err getfmt.size %d,%d\n",fmt.fmt.pix.width,fmt.fmt.pix.height);
-		GST_LOG_OBJECT(src, "retry %d ...\n", rt);
-		rt++;
-		close(capfd);
-		goto retry;
-	}
-
-	if (fmt.fmt.pix.pixelformat != DEF_PIX_FMT) {
-		GST_ERROR_OBJECT(src, "Requested pixel format not supported\n");
-		return 1;
-	}
-
-	memset(&reqbuf, 0, sizeof(reqbuf));
-	reqbuf.count = CAP_BUFCNT;
-	reqbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	reqbuf.memory = V4L2_MEMORY_MMAP;
-	if (ioctl(capfd, VIDIOC_REQBUFS, &reqbuf) < 0) {
-		GST_ERROR_OBJECT(src, "error Cannot allocate memory");
-		return 1;
-	}
-	GST_LOG_OBJECT(src, "reqbuf.count: %d\n", reqbuf.count);
-
-	memset(&buf, 0, sizeof(buf));
-	for (i = 0; i < reqbuf.count; i++) {
-		buf.type = reqbuf.type;
-		buf.index = i;
-		buf.memory = reqbuf.memory;
-		if (ioctl(capfd, VIDIOC_QUERYBUF, &buf)) {
-			GST_ERROR_OBJECT(src, "error VIDIOC_QUERYCAP");
-			return 1;
-		}
-
-		capbuf[i].length = buf.length;
-		capbuf[i].index = i;
-		capbuf[i].start = mmap(NULL, buf.length, PROT_READ|PROT_WRITE, MAP_SHARED, capfd, buf.m.offset);
-		if (capbuf[i].start == MAP_FAILED) {
-			GST_ERROR_OBJECT(src, "error Cannot mmap = %d buffer\n", i);
-			return 1;
-		}
-		memset((void *) capbuf[i].start, 0x80,
-			capbuf[i].length);
-		if (ioctl(capfd, VIDIOC_QBUF, &buf)) {
-			GST_ERROR_OBJECT(src, "error VIDIOC_QBUF");
-			return 1;
-		}
-	}
-	GST_LOG_OBJECT(src, "Init done successfully\n");
-
-	int a = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	if (ioctl(capfd, VIDIOC_STREAMON, &a)) {
-		GST_LOG_OBJECT(src, "error VIDIOC_STREAMON\n");
-		return 1;
-	}
-	GST_LOG_OBJECT(src, "Stream on...\n");
-
-	return 0;
-}
-
-static int tiv4l_cam_poll(GstTiv4lSrc *src, void *buf)
-{
-	struct v4l2_buffer capture_buf;
-	
-	capture_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	capture_buf.index = 0;
-	capture_buf.memory = V4L2_MEMORY_MMAP;
-
-	if (ioctl(capfd, VIDIOC_DQBUF, &capture_buf)) {
-		GST_LOG_OBJECT(src, "error VIDIOC_DQBUF\n");
-		return 1;
-	}
-	memcpy(buf, capbuf[capture_buf.index].start, IMG_W*IMG_H*2);
-	GST_LOG_OBJECT(src, "poll ok\n");
-	if (ioctl(capfd, VIDIOC_QBUF, &capture_buf)) {
-		GST_LOG_OBJECT(src, "error VIDIOC_QBUF\n");
-		return 1;
-	}
-	return 0;
-}
-
 static GstStaticPadTemplate srctemplate = GST_STATIC_PAD_TEMPLATE ("src",
     GST_PAD_SRC,
     GST_PAD_ALWAYS,
@@ -359,6 +175,192 @@ static gboolean gst_tiv4l_src_do_seek (GstBaseSrc * src, GstSegment * segment);
 static gboolean gst_tiv4l_src_query (GstBaseSrc * src, GstQuery * query);
 
 static GstFlowReturn gst_tiv4l_src_create (GstPushSrc * psrc, GstBuffer ** outbuf);
+
+typedef struct {
+	int index;
+	unsigned int length;
+	char *start;
+} capbuf_t;
+#define CAP_BUFCNT 3
+#define DEF_PIX_FMT		V4L2_PIX_FMT_UYVY
+static capbuf_t capbuf[CAP_BUFCNT];
+static int capfd;
+
+static int tiv4l_cam_exit(GstTiv4lSrc *src)
+{
+	int i;
+	GST_LOG_OBJECT(src, "closing\n");
+	for (i = 0; i < CAP_BUFCNT; i++) {
+		if ((void *)capbuf[i].start > (void *)0) {
+			munmap(capbuf[i].start,
+			       capbuf[i].length);
+		}
+	}
+	if (capfd)
+		close(capfd);
+	return 0;
+}
+
+static int tiv4l_cam_init(GstTiv4lSrc *src)
+{
+	int i, rt = 1;
+	struct v4l2_requestbuffers reqbuf;
+	struct v4l2_buffer buf;
+	struct v4l2_capability capability;
+	struct v4l2_input input;
+	struct v4l2_format fmt;
+
+retry:
+	capfd = open("/dev/video0", O_RDWR);
+	if (capfd <= 0) {
+		GST_ERROR_OBJECT(src, "open dev failed");
+		return 1;
+	}
+
+	while (1) {
+		i = 0;
+		GST_LOG_OBJECT(src, "ioctl G_INPUT");
+		if (ioctl(capfd, VIDIOC_G_INPUT, &i) < 0) {
+			GST_ERROR_OBJECT(src, "error VIDIOC_G_INPUT, retry");
+			sleep(1);
+			continue;
+		}
+		GST_LOG_OBJECT(src, "G_INPUT idx: %d", i);
+		break;
+	}
+
+	memset(&input, 0, sizeof(input));
+	input.index = i;
+	if (ioctl(capfd, VIDIOC_ENUMINPUT, &input) < 0) {
+		GST_ERROR_OBJECT(src, "error VIDIOC_ENUMINPUT");
+		return 1;
+	}
+	GST_LOG_OBJECT(src, "input: %s\n", input.name);
+
+	if (ioctl(capfd, VIDIOC_QUERYCAP, &capability) < 0) {
+		GST_ERROR_OBJECT(src, "error VIDIOC_QUERYCAP");
+		return 1;
+	}
+	if (!(capability.capabilities & V4L2_CAP_STREAMING)) {
+		GST_ERROR_OBJECT(src, "Not capable of streaming");
+		return 1;
+	}
+
+	for (i = 0; ; i++) {
+		struct v4l2_fmtdesc fmtdesc = {};
+		fmtdesc.index = i;
+		fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		if (ioctl(capfd, VIDIOC_ENUM_FMT, &fmtdesc))
+			break;
+		GST_LOG_OBJECT(src, "fmt: %.32s", fmtdesc.description);
+	}
+
+	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	if (ioctl(capfd, VIDIOC_G_FMT, &fmt)) {
+		GST_ERROR_OBJECT(src, "error VIDIOC_G_FMT");
+		return 1;
+	}
+
+	fmt.fmt.pix.pixelformat = DEF_PIX_FMT;
+	if (ioctl(capfd, VIDIOC_S_FMT, &fmt)) {
+		GST_ERROR_OBJECT(src, "error VIDIOC_S_FMT");
+		return 1;
+	}
+
+	if (ioctl(capfd, VIDIOC_G_FMT, &fmt)) {
+		GST_ERROR_OBJECT(src, "error VIDIOC_G_FMT");
+		return 1;
+	}
+
+	GST_LOG_OBJECT(src, "getfmt.size %dx%d", fmt.fmt.pix.width, fmt.fmt.pix.height);
+	GST_LOG_OBJECT(src, "want.size %dx%d", IMG_W, IMG_H);
+
+	if (!
+			((fmt.fmt.pix.width == IMG_W*2 && fmt.fmt.pix.height == IMG_H*2) || 
+			(fmt.fmt.pix.width == IMG_W && fmt.fmt.pix.height == IMG_H) )
+		 )	
+	{
+		GST_LOG_OBJECT(src, "err getfmt.size %d,%d",fmt.fmt.pix.width,fmt.fmt.pix.height);
+		GST_LOG_OBJECT(src, "retry %d ...", rt);
+		rt++;
+		close(capfd);
+		goto retry;
+	}
+
+	if (fmt.fmt.pix.pixelformat != DEF_PIX_FMT) {
+		GST_ERROR_OBJECT(src, "Requested pixel format not supported");
+		return 1;
+	}
+
+	memset(&reqbuf, 0, sizeof(reqbuf));
+	reqbuf.count = CAP_BUFCNT;
+	reqbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	reqbuf.memory = V4L2_MEMORY_MMAP;
+	if (ioctl(capfd, VIDIOC_REQBUFS, &reqbuf) < 0) {
+		GST_ERROR_OBJECT(src, "error Cannot allocate memory");
+		return 1;
+	}
+	GST_LOG_OBJECT(src, "reqbuf.count: %d", reqbuf.count);
+
+	memset(&buf, 0, sizeof(buf));
+	for (i = 0; i < reqbuf.count; i++) {
+		buf.type = reqbuf.type;
+		buf.index = i;
+		buf.memory = reqbuf.memory;
+		if (ioctl(capfd, VIDIOC_QUERYBUF, &buf)) {
+			GST_ERROR_OBJECT(src, "error VIDIOC_QUERYCAP");
+			return 1;
+		}
+
+		capbuf[i].length = buf.length;
+		capbuf[i].index = i;
+		capbuf[i].start = mmap(NULL, buf.length, PROT_READ|PROT_WRITE, MAP_SHARED, capfd, buf.m.offset);
+		if (capbuf[i].start == MAP_FAILED) {
+			GST_ERROR_OBJECT(src, "error Cannot mmap = %d buffer", i);
+			return 1;
+		}
+		memset((void *) capbuf[i].start, 0x80,
+			capbuf[i].length);
+		if (ioctl(capfd, VIDIOC_QBUF, &buf)) {
+			GST_ERROR_OBJECT(src, "error VIDIOC_QBUF");
+			return 1;
+		}
+	}
+	GST_LOG_OBJECT(src, "Init done successfully");
+
+	int a = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	if (ioctl(capfd, VIDIOC_STREAMON, &a)) {
+		GST_LOG_OBJECT(src, "error VIDIOC_STREAMON");
+		return 1;
+	}
+	GST_LOG_OBJECT(src, "Stream on...");
+
+	return 0;
+}
+
+static int tiv4l_cam_poll(GstTiv4lSrc *src, void *buf)
+{
+	struct v4l2_buffer capture_buf;
+	
+	capture_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	capture_buf.index = 0;
+	capture_buf.memory = V4L2_MEMORY_MMAP;
+
+	if (ioctl(capfd, VIDIOC_DQBUF, &capture_buf)) {
+		GST_LOG_OBJECT(src, "error VIDIOC_DQBUF");
+		return 1;
+	}
+	memcpy(buf, capbuf[capture_buf.index].start, IMG_W*IMG_H*2);
+	//GST_LOG_OBJECT(src, "poll ok");
+	if (ioctl(capfd, VIDIOC_QBUF, &capture_buf)) {
+		GST_LOG_OBJECT(src, "error VIDIOC_QBUF");
+		return 1;
+	}
+	return 0;
+}
+
+
+
 
 static void
 gst_tiv4l_src_base_init (gpointer g_class)
@@ -690,13 +692,13 @@ gst_tiv4l_src_create (GstPushSrc * psrc, GstBuffer ** outbuf)
     readbytes = read (src->fd, GST_BUFFER_DATA (buf), blocksize);
     GST_LOG_OBJECT (src, "read %" G_GSSIZE_FORMAT, readbytes);
   } while (readbytes == -1 && errno == EINTR);  /* retry if interrupted */
-#endif
 
   if (readbytes < 0)
     goto read_error;
 
   if (readbytes == 0)
     goto eos;
+#endif
 	
   GST_BUFFER_OFFSET (buf) = src->curoffset;
   GST_BUFFER_SIZE (buf) = readbytes;
@@ -710,6 +712,7 @@ gst_tiv4l_src_create (GstPushSrc * psrc, GstBuffer ** outbuf)
 
   return GST_FLOW_OK;
 
+#if 0
   /* ERRORS */
 #ifndef HAVE_WIN32
 poll_error:
@@ -739,6 +742,7 @@ read_error:
     gst_buffer_unref (buf);
     return GST_FLOW_ERROR;
   }
+#endif
 }
 
 static gboolean

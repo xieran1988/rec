@@ -26,6 +26,12 @@ mycam-run: mycam
 gst: tiv4l.so
 	$(call targetsh,./gst.sh $c)
 
+inspect:
+	$(call targetsh,gst-inspect)
+
+play-a:
+	gst-launch playbin uri=file:///${PWD}/a.264
+
 clean:
 	rm -rf *.o r
 
