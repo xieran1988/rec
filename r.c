@@ -20,6 +20,7 @@
 #include <gst/gst.h>
 
 #include <gst/rtsp-server/rtsp-server.h>
+#include <stdlib.h>
 
 /* define this if you want the resource to only be available when using
  * user/admin as the password */
@@ -74,20 +75,16 @@ main (int argc, char *argv[])
   gst_rtsp_server_set_auth (server, auth);
 #endif
 
+	char *pipeline = getenv("PIPELINE");
+	printf("pipeline: %s\n", pipeline);
+
   /* make a media factory for a test stream. The default media factory can use
    * gst-launch syntax to create pipelines. 
    * any launch line works as long as it contains elements named pay%d. Each
    * element with pay%d names will be a stream */
   factory = gst_rtsp_media_factory_new ();
-  gst_rtsp_media_factory_set_launch (factory, "( "
-				"tiv4lsrc ! video/x-raw-yuv,format=(fourcc)UYVY,width=720,height=576,framerate=15/1 ! "
-				"TIVidenc1 codecName=h264enc engineName=codecServer ! "
-				"rtph264pay name=pay0 pt=96 "
-				//"videotestsrc pattern=ball ! video/x-raw-yuv,width=720,height=576,framerate=15/1 ! "
-				//"x264enc ! "
-				//"audiotestsrc ! audio/x-raw-int,rate=8000 ! "
-				//"alawenc ! rtppcmapay name=pay1 pt=97 " 
-				")"
+  gst_rtsp_media_factory_set_launch (factory, 
+			pipeline
 				);
 
   /* attach the test factory to the /test url */

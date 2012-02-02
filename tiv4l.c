@@ -181,7 +181,7 @@ typedef struct {
 	unsigned int length;
 	char *start;
 } capbuf_t;
-#define CAP_BUFCNT 3
+#define CAP_BUFCNT 2
 #define DEF_PIX_FMT		V4L2_PIX_FMT_UYVY
 static capbuf_t capbuf[CAP_BUFCNT];
 static int capfd;
@@ -338,7 +338,7 @@ retry:
 	return 0;
 }
 
-static int tiv4l_cam_poll(GstTiv4lSrc *src, void *buf)
+static int tiv4l_cam_poll(GstTiv4lSrc *src, GstBuffer *buf)
 {
 	struct v4l2_buffer capture_buf;
 	
@@ -350,17 +350,14 @@ static int tiv4l_cam_poll(GstTiv4lSrc *src, void *buf)
 		GST_LOG_OBJECT(src, "error VIDIOC_DQBUF");
 		return 1;
 	}
-	memcpy(buf, capbuf[capture_buf.index].start, IMG_W*IMG_H*2);
-	//GST_LOG_OBJECT(src, "poll ok");
+	gst_buffer_set_data(buf, capbuf[capture_buf.index].start, IMG_W*IMG_H*2);
+	GST_LOG("bufaddr %p", capbuf[capture_buf.index].start);
 	if (ioctl(capfd, VIDIOC_QBUF, &capture_buf)) {
 		GST_LOG_OBJECT(src, "error VIDIOC_QBUF");
 		return 1;
 	}
 	return 0;
 }
-
-
-
 
 static void
 gst_tiv4l_src_base_init (gpointer g_class)
@@ -408,14 +405,15 @@ gst_tiv4l_src_class_init (GstTiv4lSrcClass * klass)
 
   gstbasesrc_class->start = GST_DEBUG_FUNCPTR (gst_tiv4l_src_start);
   gstbasesrc_class->stop = GST_DEBUG_FUNCPTR (gst_tiv4l_src_stop);
+  gstpush_src_class->create = GST_DEBUG_FUNCPTR (gst_tiv4l_src_create);
+	/*
   gstbasesrc_class->unlock = GST_DEBUG_FUNCPTR (gst_tiv4l_src_unlock);
   gstbasesrc_class->unlock_stop = GST_DEBUG_FUNCPTR (gst_tiv4l_src_unlock_stop);
   gstbasesrc_class->is_seekable = GST_DEBUG_FUNCPTR (gst_tiv4l_src_is_seekable);
   gstbasesrc_class->get_size = GST_DEBUG_FUNCPTR (gst_tiv4l_src_get_size);
   gstbasesrc_class->do_seek = GST_DEBUG_FUNCPTR (gst_tiv4l_src_do_seek);
   gstbasesrc_class->query = GST_DEBUG_FUNCPTR (gst_tiv4l_src_query);
-
-  gstpush_src_class->create = GST_DEBUG_FUNCPTR (gst_tiv4l_src_create);
+	*/
 }
 
 static void
@@ -632,6 +630,8 @@ gst_tiv4l_src_create (GstPushSrc * psrc, GstBuffer ** outbuf)
   gint retval;
 #endif
 
+  GST_LOG_OBJECT (psrc, "src_create");
+
   src = GST_TIV4L_SRC (psrc);
 
   if (src->timeout > 0) {
@@ -679,13 +679,13 @@ gst_tiv4l_src_create (GstPushSrc * psrc, GstBuffer ** outbuf)
 	blocksize = readbytes;
 
   /* create the buffer */
-  buf = gst_buffer_try_new_and_alloc (blocksize);
+  buf = gst_buffer_new ();
   if (G_UNLIKELY (buf == NULL)) {
     GST_ERROR_OBJECT (src, "Failed to allocate %u bytes", blocksize);
     return GST_FLOW_ERROR;
   }
 
-  tiv4l_cam_poll(src, GST_BUFFER_DATA (buf));
+  tiv4l_cam_poll(src, buf);
 
 #if 0
   do {
@@ -705,7 +705,7 @@ gst_tiv4l_src_create (GstPushSrc * psrc, GstBuffer ** outbuf)
   GST_BUFFER_TIMESTAMP (buf) = GST_CLOCK_TIME_NONE;
   src->curoffset += readbytes;
 
-  GST_LOG_OBJECT (psrc, "Read buffer of size %" G_GSSIZE_FORMAT, readbytes);
+  GST_INFO_OBJECT (psrc, "Read buffer of size %" G_GSSIZE_FORMAT, readbytes);
 
   /* we're done, return the buffer */
   *outbuf = buf;
@@ -751,6 +751,8 @@ gst_tiv4l_src_query (GstBaseSrc * basesrc, GstQuery * query)
   gboolean ret = FALSE;
   GstTiv4lSrc *src = GST_TIV4L_SRC (basesrc);
 
+  GST_LOG_OBJECT (src, "src_query");
+
   switch (GST_QUERY_TYPE (query)) {
     case GST_QUERY_URI:
       gst_query_set_uri (query, src->uri);
@@ -780,6 +782,8 @@ gst_tiv4l_src_get_size (GstBaseSrc * bsrc, guint64 * size)
 {
   GstTiv4lSrc *src = GST_TIV4L_SRC (bsrc);
   struct stat stat_results;
+
+  GST_LOG_OBJECT (src, "get_size");
 
   if (src->size != -1) {
     *size = src->size;
@@ -812,6 +816,8 @@ gst_tiv4l_src_do_seek (GstBaseSrc * bsrc, GstSegment * segment)
   gint res;
   gint64 offset;
   GstTiv4lSrc *src = GST_TIV4L_SRC (bsrc);
+
+  GST_LOG_OBJECT (src, "do_seek");
 
   offset = segment->start;
 
