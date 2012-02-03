@@ -30,6 +30,9 @@ gst: tiv4l.so rebuild-ti-gst rebuild-rtsp malve.so
 inspect:
 	$(call targetsh,gst-inspect)
 
+vlc-ts:
+	./gst.sh playvlcts
+
 play-a:
 	gst-launch playbin uri=file:///${PWD}/a.264
 

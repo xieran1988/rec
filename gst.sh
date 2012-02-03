@@ -37,6 +37,24 @@ export DMAI_DEBUG=0
 	pipe="$tisrc $nn ! $vidcap ! malve ! $tivid ! mpegtsmux ! filesink location=a.ts"
 #	pipe="$tisrc $nn ! $vidcap ! $tivid ! avimux ! filesink location=a.avi"
 }
+
+[ "$1" = "tits" ] && {
+	debug="ti*:3,TI*:3,lega*:9"
+	parse264="legacyh264parse config-interval=1"
+	pipe="$tisrc ! $vidcap ! malve ! $tivid ! $parse264 ! mpegtsmux ! $udpsink"
+	pipe="$tisrc ! $vidcap ! malve ! $tivid ! mpegtsmux ! $udpsink"
+}
+
+[ "$1" = "playvlcts" ] && {
+	vlc -vvvv "udp://@0.0.0.0:1199"
+}
+
+[ "$1" = "playts" ] && {
+	debug="mpegtsdemux:3,ffmpeg:4"
+	pipe="$udpsrc caps=video/mpegts ! mpegtsdemux ! $ticap ! ffdec_h264 ! xvimagesink"
+}
+
+
 [ "$1" = "ti264" ] && {
 	debug="ti*:3,TI*:3"
 	pipe="$tisrc ! $vidcap ! malve ! $tivid ! $udpsink"
@@ -76,10 +94,6 @@ export DMAI_DEBUG=0
 [ "$1" = "ts" ] && {
 	debug="tiv4lsrc:9,mpegtsmux:4"
 	pipe="tiv4lsrc ! $vidcap ! $tivid ! mpegtsmux ! $udpsink"
-}
-[ "$1" = "playts" ] && {
-	debug="mpegtsdemux:3,ffmpeg:4"
-	pipe="$udpsrc caps=video/mpegts ! mpegtsdemux ! $ticap ! ffdec_h264 ! xvimagesink"
 }
 
 #	pipe="tiv4lsrc num-buffers=190 ! $vidcap ! $tivid ! rtph264pay name=pay0 pt=96"
