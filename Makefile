@@ -14,6 +14,7 @@ test-rtsp: r
 
 $(eval $(call single-target,r))
 $(eval $(call my-gst-plugin,fdsrc,tiv4l))
+$(eval $(call my-gst-plugin,valve,malve))
 
 test-my-plugin:
 	$(call targetsh,gst-launch ddsrc ! fdsink)
@@ -23,10 +24,7 @@ mycam:
 	make -C ../asys mycam
 	cp ../asys/mycam .
 
-mycam-run: mycam
-	$(call targetsh,./mycam 15)
-
-gst: tiv4l.so rebuild-ti-gst rebuild-rtsp
+gst: tiv4l.so rebuild-ti-gst rebuild-rtsp malve.so
 	$(call targetsh,./gst.sh $c)
 
 inspect:

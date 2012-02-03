@@ -181,7 +181,7 @@ typedef struct {
 	unsigned int length;
 	char *start;
 } capbuf_t;
-#define CAP_BUFCNT 2
+#define CAP_BUFCNT 3
 #define DEF_PIX_FMT		V4L2_PIX_FMT_UYVY
 static capbuf_t capbuf[CAP_BUFCNT];
 static int capfd;

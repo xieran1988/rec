@@ -1,15 +1,46 @@
 #!/bin/sh
 
-vidcap="video/x-raw-yuv,format=(fourcc)UYVY,width=720,height=576,framerate=60/1"
-ticap="video/x-h264,width=720,height=576,framerate=60/1"
+vidcap="video/x-raw-yuv,format=(fourcc)UYVY,width=720,height=576,framerate=30/1"
+ticap="video/x-h264,width=720,height=576,framerate=30/1"
 cont="contiguousInputFrame=true"
-cont=
+#cont=
 prep="TIPrepEncBuf numOutputBufs=3 $cont ! "
 prep=
-tivid="$prep TIVidenc1 $cont codecName=h264enc engineName=codecServer "
+tivid="$prep TIVidenc1 $cont codecName=h264enc engineName=codecServer byteStream=true bitRate=4000000"
 udpsink="udpsink host=192.168.1.174 port=1199"
 udpsrc="udpsrc port=1199"
+sink264file="filesink location=a.264"
+tisrc="ticapturesrc video-standard=480p"
 n="num-buffers=3"
+nn="num-buffers=100"
+
+export DMAI_DEBUG=0
+
+[ "$1" = "tifakecap" ] && {
+	debug="ti*:9"
+	pipe="$tisrc ! $vidcap ! fakesink"
+}
+[ "$1" = "ticap" ] && {
+	debug="ti*:9"
+	pipe="$tisrc ! $vidcap ! filesink location=a.yuv"
+}
+[ "$1" = "tifake264" ] && {
+	debug="ti*:3,TI*:3"
+	pipe="$tisrc ! $vidcap ! malve ! $tivid ! fakesink"
+}
+[ "$1" = "ti264file" ] && {
+	debug="ti*:3,TI*:3"
+	pipe="$tisrc $nn ! $vidcap ! malve ! $tivid ! $sink264file"
+}
+[ "$1" = "titsfile" ] && {
+	debug="ti*:3,TI*:3"
+	pipe="$tisrc $nn ! $vidcap ! malve ! $tivid ! mpegtsmux ! filesink location=a.ts"
+#	pipe="$tisrc $nn ! $vidcap ! $tivid ! avimux ! filesink location=a.avi"
+}
+[ "$1" = "ti264" ] && {
+	debug="ti*:3,TI*:3"
+	pipe="$tisrc ! $vidcap ! malve ! $tivid ! $udpsink"
+}
 
 [ "$1" = "fakecap" ] && {
 	debug="tiv4lsrc:9"
@@ -21,6 +52,10 @@ n="num-buffers=3"
 	pipe="tiv4lsrc ! $vidcap ! $tivid ! fakesink"
 }
 
+[ "$1" = "264file" ] && {
+	debug="udpsink:9,tiv4lsrc:3,TI*:0"
+	pipe="tiv4lsrc $nn ! $vidcap ! $tivid ! $sink264file"
+}
 [ "$1" = "264" ] && {
 	debug="udpsink:9,tiv4lsrc:9"
 	pipe="tiv4lsrc ! $vidcap ! $tivid ! $udpsink"
@@ -47,13 +82,8 @@ n="num-buffers=3"
 	pipe="$udpsrc caps=video/mpegts ! mpegtsdemux ! $ticap ! ffdec_h264 ! xvimagesink"
 }
 
-[ "$1" = "ti" ] && {
-	debug="ti*:9"
-	pipe="tiv4lsrc buffers=190 ! $vidcap ! $tivid ! filesink location=a.264"
-	pipe="tiv4lsrc ! $vidcap ! $tivid ! fakesink"
 #	pipe="tiv4lsrc num-buffers=190 ! $vidcap ! $tivid ! rtph264pay name=pay0 pt=96"
 #	pipe="tiv4lsrc num-buffers=190 ! $vidcap ! $tivid ! rtph264pay name=pay0 pt=96 ! fakesink"
-}
 echo $pipe
 echo $debug
 gst-launch --gst-debug="$debug" $pipe 
