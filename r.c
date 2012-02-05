@@ -60,6 +60,8 @@ main (int argc, char *argv[])
   /* create a server instance */
   server = gst_rtsp_server_new ();
 
+	gst_rtsp_server_set_backlog(server, 128);
+
   /* get the mapping for this server, every server has a default mapper object
    * that be used to map uri mount points to media factories */
   mapping = gst_rtsp_server_get_media_mapping (server);
@@ -76,13 +78,16 @@ main (int argc, char *argv[])
 #endif
 
 	char *pipeline = getenv("PIPELINE");
-	printf("pipeline: %s\n", pipeline);
+	g_printf("pipeline: %s\n", pipeline);
 
   /* make a media factory for a test stream. The default media factory can use
    * gst-launch syntax to create pipelines. 
    * any launch line works as long as it contains elements named pay%d. Each
    * element with pay%d names will be a stream */
   factory = gst_rtsp_media_factory_new ();
+
+	gst_rtsp_media_factory_set_shared(factory, TRUE);
+
   gst_rtsp_media_factory_set_launch (factory, 
 			pipeline
 				);

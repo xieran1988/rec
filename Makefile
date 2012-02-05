@@ -24,14 +24,23 @@ mycam:
 	make -C ../asys mycam
 	cp ../asys/mycam .
 
-gst: tiv4l.so rebuild-ti-gst rebuild-rtsp malve.so
+vlc-ts:
+	make -C ${parentsdir}/vlc
+	${parentsdir}/vlc/vlc -vvvv "udp://@0.0.0.0:1199"
+
+vlc-rtsp:
+	make -C ${parentsdir}/vlc
+	${parentsdir}/vlc/vlc -vvvv "rtsp://192.168.1.36:8554/test"
+
+gst: tiv4l.so rebuild-ti-gst rebuild-rtsp malve.so r
 	$(call targetsh,./gst.sh $c)
+
+tswin:
+	make gst c=tits
 
 inspect:
 	$(call targetsh,gst-inspect)
 
-vlc-ts:
-	./gst.sh playvlcts
 
 play-a:
 	gst-launch playbin uri=file:///${PWD}/a.264

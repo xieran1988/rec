@@ -196,10 +196,9 @@ gst_malve_chain (GstPad * pad, GstBuffer * buffer)
   if (g_atomic_int_get (&malve->drop))
     ret = GST_FLOW_OK;
 
-	{
-		static int i;
-		i++;
-		malve->drop = !(i % 3);
+	if (1) {
+		static int i, drop[] = {1, 0};
+		malve->drop = drop[i++ % (sizeof(drop)/sizeof(drop[0]))];
 	}
 
   return ret;
