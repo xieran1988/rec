@@ -32,7 +32,7 @@ vlc-rtsp:
 	make -C ${parentsdir}/vlc
 	${parentsdir}/vlc/vlc -vvvv "rtsp://192.168.1.36:8554/test"
 
-gst: tiv4l.so rebuild-ti-gst rebuild-rtsp malve.so r
+gst: tiv4l.so rebuild-gst-ti rebuild-rtsp malve.so r
 	$(call targetsh,./gst.sh $c)
 
 tswin:

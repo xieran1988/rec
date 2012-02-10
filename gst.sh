@@ -45,7 +45,7 @@ export DMAI_DEBUG=0
 }
 
 [ "$1" = "localudp" ] && {
-	pipe="$tisrc ! $vidcap ! malve ! $tivid ! $multiudpsink"
+	pipe="$tisrc ! $vidcap ! $tivid ! $multiudpsink"
 }
 
 [ "$1" = "r" ] && {
