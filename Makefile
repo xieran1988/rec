@@ -1,6 +1,6 @@
 
 #plat := pc
-plat ?= 3530
+plat ?= 3730
 libs := gstreamer-0.10 zlib \
 	gstreamer-rtsp-0.10 gst-rtsp-server-0.10 \
 	gstreamer-app-0.10 \
