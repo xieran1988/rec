@@ -12,7 +12,7 @@ include $(parentsdir)/top.mk
 
 all: test-rtsp
 
-test-rtsp: r
+test-rtsp: rtsp.c
 	$(call targetsh,./test-rtsp.sh)
 
 $(eval $(call single-target,r))
