@@ -1,8 +1,11 @@
 
 #plat := pc
-plat ?= 3730
-libs := gstreamer-0.10 zlib \
-	gstreamer-rtsp-0.10 gst-rtsp-server-0.10 \
+plat ?= a8
+libs := \
+	gstreamer-0.10 \
+	zlib \
+	gstreamer-rtsp-0.10 \
+	gst-rtsp-server-0.10 \
 	gstreamer-app-0.10 \
 	gstreamer-rtp-0.10 
 include $(parentsdir)/top.mk
@@ -13,16 +16,10 @@ test-rtsp: r
 	$(call targetsh,./test-rtsp.sh)
 
 $(eval $(call single-target,r))
-$(eval $(call my-gst-plugin,fdsrc,tiv4l))
 $(eval $(call my-gst-plugin,valve,malve))
 
 test-my-plugin:
 	$(call targetsh,gst-launch ddsrc ! fdsink)
-
-.PHONY: mycam
-mycam:
-	make -C ../asys mycam
-	cp ../asys/mycam .
 
 vlc-ts:
 	make -C ${parentsdir}/vlc
@@ -41,7 +38,6 @@ tswin:
 inspect:
 	$(call targetsh,gst-inspect)
 
-
 play-a:
 	gst-launch playbin uri=file:///${PWD}/a.264
 
@@ -54,5 +50,5 @@ play-deca:
 #	gst-launch --gst-debug="filesink:9" filesrc location=a.264 ! h264parse ! filesink location=/dev/null
 
 clean:
-	rm -rf *.o r
+	rm -rf *.o *.so r
 
