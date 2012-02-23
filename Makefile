@@ -1,25 +1,28 @@
 
-#plat := pc
 plat ?= a8
-libs := \
-	gstreamer-0.10 \
-	zlib \
-	gstreamer-rtsp-0.10 \
-	gst-rtsp-server-0.10 \
-	gstreamer-app-0.10 \
-	gstreamer-rtp-0.10 
-include $(parentsdir)/top.mk
+test ?= telnet-simplefs-3730
+libs += gstreamer-0.10
+libs += zlib 
+libs +=	gstreamer-rtsp-0.10 
+libs +=	gst-rtsp-server-0.10
+libs +=	gstreamer-app-0.10
+libs +=	gstreamer-rtp-0.10 
+
+include ${parentsdir}/top.mk
 
 all: test-rtsp
 
 test-rtsp: rtsp.c
-	$(call targetsh,./test-rtsp.sh)
+	$(call sh, ./test-rtsp.sh)
 
-$(eval $(call single-target,r))
+$(eval $(call single-target,rtsp))
 $(eval $(call my-gst-plugin,valve,malve))
 
+mix ce ti264 arec: 
+	make gst c=$@
+
 test-my-plugin:
-	$(call targetsh,gst-launch ddsrc ! fdsink)
+	$(call sh, gst-launch ddsrc ! fdsink)
 
 vlc-ts:
 	make -C ${parentsdir}/vlc
@@ -29,14 +32,14 @@ vlc-rtsp:
 	make -C ${parentsdir}/vlc
 	${parentsdir}/vlc/vlc -vvvv "rtsp://192.168.1.36:8554/test"
 
-gst: tiv4l.so rebuild-gst-ti rebuild-rtsp malve.so r
-	$(call targetsh,./gst.sh $c)
+gst: rebuild-gst-ti rebuild-rtsp rebuild-gst-alsasrc malve.so rtsp
+	$(call sh, ./gst.sh $c)
 
 tswin:
 	make gst c=tits
 
 inspect:
-	$(call targetsh,gst-inspect)
+	$(call sh,gst-inspect)
 
 play-a:
 	gst-launch playbin uri=file:///${PWD}/a.264
@@ -50,5 +53,5 @@ play-deca:
 #	gst-launch --gst-debug="filesink:9" filesrc location=a.264 ! h264parse ! filesink location=/dev/null
 
 clean:
-	rm -rf *.o *.so r
+	rm -rf *.o *.so rtsp
 

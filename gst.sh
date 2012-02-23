@@ -1,14 +1,14 @@
 #!/bin/sh
 
 vidcap="video/x-raw-yuv,format=(fourcc)UYVY,width=720,height=576,framerate=30/1"
-ticap="video/x-h264,width=720,height=576,framerate=12/1"
+ticap="video/x-h264,width=720,height=576,framerate=24/1"
 cont="contiguousInputFrame=true"
 #cont=
 #prep="TIPrepEncBuf numOutputBufs=3 $cont ! "
 tivid="TIVidenc1 $cont codecName=h264enc engineName=codecServer byteStream=true"
 timpgvid="TIVidenc1 $cont codecName=mp4venc engineName=codecServer"
 imgsize=829440
-ip=192.168.1.174
+ip=192.168.0.174
 #ip=192.168.1.100
 udpsink="udpsink host=$ip port=1199"
 localudpsink="udpsink port=1199"
@@ -25,6 +25,18 @@ audcap="audio/x-raw-int,rate=64000"
 
 export DMAI_DEBUG=0
 
+[ "$1" = "arec" ] && {
+	arecord -f dat -d 10 -D hw:0,1 a.wav
+	exit
+}
+
+[ "$1" = "ce" ] && {
+	export CE_TRACE="*=01234567" 
+	debug="TI*:3"
+	vidcap="video/x-raw-yuv,format=(fourcc)UYVY,width=1280,height=720,framerate=30/1"
+	pipe="videotestsrc ! $vidcap ! $tivid ! fakesink"
+}
+
 [ "$1" = "mp4" ] && {
 	pipe="$tisrc ! $vidcap ! $timpgvid ! $sinkmp4"
 }
@@ -37,7 +49,7 @@ export DMAI_DEBUG=0
 		$tisrc ! $vidcap ! malve ! $tivid ! mux. \
 		mpegtsmux name=mux ! filesink location=a.ts
 		"
-	pipe="alsasrc num-buffers=100 ! $audcap ! ffenc_aac ! filesink location=a.aac"
+	pipe="alsasrc device=default ! $audcap ! ffenc_aac ! filesink location=a.aac"
 }
 
 [ "$1" = "save" ] && {
@@ -45,17 +57,18 @@ export DMAI_DEBUG=0
 }
 
 [ "$1" = "localudp" ] && {
+	debug="ti*:3,TI*:3"
 	pipe="$tisrc ! $vidcap ! $tivid ! $multiudpsink"
 }
 
-[ "$1" = "r" ] && {
+[ "$1" = "rtsp" ] && {
 	export GST_DEBUG="rtsp*:9"
 	rtpvid="rtph264pay name=pay0 pt=96 "
 	export PIPELINE="( $udpsrc caps=$ticap ! $rtpvid )"
 	xvid="x264enc ! "
 	audsrc="audiotestsrc ! audio/x-raw-int,rate=8000 ! "
 	audsink="alawenc ! rtppcmapay name=pay1 pt=97 " 
-	./r
+	./rtsp
 	exit 
 }
 
@@ -74,9 +87,12 @@ export DMAI_DEBUG=0
 [ "$1" = "playyuv" ] && {
 	pipe="$udpsrc caps=$vidcap ! xvimagesink"
 }
+[ "$1" = "vidtest264" ] && {
+	pipe="videotestsrc ! $vidcap ! malve ! $tivid ! $udpsink"
+}
 [ "$1" = "ti264" ] && {
 	debug="ti*:3,TI*:3"
-	pipe="$tisrc ! $vidcap ! malve ! $tivid ! $udpsink"
+	pipe="$tisrc ! $vidcap ! $tivid ! $udpsink"
 }
 [ "$1" = "tifake264" ] && {
 	debug="ti*:3,TI*:3"
@@ -101,13 +117,16 @@ export DMAI_DEBUG=0
 	pipe="$udpsrc caps=video/mpegts ! mpegtsdemux ! $ticap ! ffdec_h264 ! xvimagesink"
 }
 
-
-
-
 [ "$1" = "fakecap" ] && {
-	debug="tiv4lsrc:9"
-	pipe="tiv4lsrc ! fakesink"
+	debug="ti*:9"
+	pipe="$tisrc ! $vidcap ! fakesink"
 }
+
+[ "$1" = "fakev4l" ] && {
+	debug="v4l2*:9"
+	pipe="v4l2src device=/dev/video0 ! $vidcap ! fakesink"
+}
+
 
 [ "$1" = "fake264" ] && {
 	debug="tiv4lsrc:4,TI*:0"
