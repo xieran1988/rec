@@ -18,7 +18,7 @@ test-rtsp: rtsp.c
 $(eval $(call single-target,rtsp))
 $(eval $(call my-gst-plugin,valve,malve))
 
-mix ce ti264 arec: 
+vidudp aududp gst-rtsp tsudp tsfile: 
 	make gst c=$@
 
 test-my-plugin:
