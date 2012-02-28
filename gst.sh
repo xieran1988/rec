@@ -22,6 +22,11 @@ nn="num-buffers=300"
 #export GST_DEBUG_DUMP_DOT_DIR=`pwd`
 export DMAI_DEBUG=0
 
+[ "$1" = "arec" ] && {
+	arecord -f cd -d 4 > a.wav
+	exit
+}
+
 [ "$1" = "vidudp" ] && {
 #	debug="ti*:3,TI*:3"
 	pipe="$tisrc ! $vidcap ! $tivid ! $vidsink"
