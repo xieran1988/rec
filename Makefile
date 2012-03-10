@@ -18,9 +18,9 @@ test-rtsp: rtsp.c
 $(eval $(call single-target,rtsp))
 $(eval $(call my-gst-plugin,valve,malve))
 
-vidudp aududp gst-rtsp tsudp tsfile arec: 
+vidudp aududp gst-rtsp tsudp tsfile arec tstest test vidtcp encdec:  
 	make gst c=$@
-
+ 
 test-my-plugin:
 	$(call sh, gst-launch ddsrc ! fdsink)
 
