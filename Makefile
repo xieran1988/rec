@@ -38,6 +38,7 @@ vlc-rtsp:
 asys2:
 	make -C ${parentsdir}/../asys2
 	cp ${parentsdir}/../asys2/capfilter.so .
+	nc.traditional -u 192.168.0.37 1653 -q 0 <<<"q"
 
 gst: rebuild-gst-ti rebuild-rtsp rebuild-gst-alsasrc malve.so rtsp asys2
 	$(call sh, ./gst.sh $c)

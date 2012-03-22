@@ -196,6 +196,7 @@ gst_malve_chain (GstPad * pad, GstBuffer * buffer)
   if (g_atomic_int_get (&malve->drop))
     ret = GST_FLOW_OK;
 
+	/*
 	{
 		unsigned char *p = GST_BUFFER_DATA(buffer);
 		int x, y;
@@ -205,10 +206,11 @@ gst_malve_chain (GstPad * pad, GstBuffer * buffer)
 		memset(p, 0, GST_BUFFER_SIZE(buffer));
 		GST_INFO("addr %p len %d", p, GST_BUFFER_SIZE(buffer));
 	}
+	*/
 
 	if (1) {
 		static int i, drop[] = {1, 0};
-//		malve->drop = drop[i++ % (sizeof(drop)/sizeof(drop[0]))];
+		malve->drop = drop[i++ % (sizeof(drop)/sizeof(drop[0]))];
 	}
 
   return ret;
