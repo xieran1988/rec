@@ -2,4 +2,4 @@
 !*.[ch]
 !*.sh
 !Makefile
-!www/php
+!www/*
