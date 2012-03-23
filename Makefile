@@ -21,7 +21,28 @@ test-rtsp: rtsp
 $(eval $(call single-target,rtsp))
 $(eval $(call my-gst-plugin,valve,malve))
 
-vidudp aududp gst-rtsp tsudp tsfile arec tstest test vidtcp encdec aac udp2ser 264udp: 
+lighttpd:
+	$(call sh, lighttpd -D -f lighttpd.conf)
+
+test-act:
+	cat test.xml | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?act
+
+test-load:
+	echo | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?load
+
+test-save:
+	echo | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?save
+
+test-cur:
+	echo | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?cur
+
+test-upload:
+	cat upload.xml | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?upload
+
+test-restart:
+	echo | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?restart
+
+gst-rtsp 264udp: 
 	make gst c=$@
  
 test-my-plugin:

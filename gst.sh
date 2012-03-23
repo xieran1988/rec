@@ -4,9 +4,9 @@ vidcap="video/x-raw-yuv,format=(fourcc)UYVY,width=720,height=576"
 vidcap="video/x-raw-yuv,format=(fourcc)UYVY,width=720,height=576,framerate=30/1"
 ticap="video/x-h264,width=720,height=576,framerate=24/1"
 audcap="audio/x-raw-int,channels=1,width=16,rate=44100"
-tienc="TIVidenc1 codecName=h264enc engineName=codecServer byteStream=true "
+tienc="TIVidenc1 codecName=h264enc engineName=codecServer byteStream=true genTimeStamps=false "
 #tienc="TIVidenc1 codecName=mpeg4enc engineName=codecServer byteStream=true "
-clisink="multiudpsink clients=192.168.0.100:1199,192.168.0.174:1199,127.0.0.1:1204,127.0.0.1:1209"
+clisink="multiudpsink clients=192.168.0.100:1199,192.168.0.174:1199,127.0.0.1:1204,127.0.0.1:1209,192.168.0.103:1199"
 #clisink="multiudpsink clients=127.0.0.1:1204"
 #clisink="multiudpsink clients=192.168.0.100:1199"
 tssrc="udpsrc port=1204 caps=video/mpegts"
@@ -40,7 +40,7 @@ export DMAI_DEBUG=0
 
 [ "$1" = "264udp" ] && {
 	debug="malve:9,TI*:3"
-	pipe="$tisrc ! malve ! $vidcap ! $tienc ! $clisink"
+	pipe="$tisrc ! $vidcap ! $tienc ! $clisink"
 }
 
 [ "$1" = "aac" ] && {
