@@ -42,6 +42,9 @@ test-upload:
 test-restart:
 	echo | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?restart
 
+test-reset:
+	echo | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?reset
+
 gst-rtsp 264udp: 
 	make gst c=$@
  
