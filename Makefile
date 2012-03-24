@@ -24,28 +24,30 @@ $(eval $(call my-gst-plugin,valve,malve))
 lighttpd:
 	$(call sh, lighttpd -D -f lighttpd.conf)
 
+post := curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?
+
 test-act:
-	cat test.xml | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?act
+	cat test.xml | ${post}$c.act
 
 test-load:
-	echo | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?load
+	echo | ${post}$c.load
 
 test-save:
-	echo | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?save
+	echo | ${post}$c.save
 
 test-cur:
-	echo | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?cur
+	echo | ${post}$c.cur
 
 test-upload:
-	cat upload.xml | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?upload
+	cat upload.xml | ${post}$c.upload
 
 test-restart:
-	echo | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?restart
+	echo | ${post}$c.restart
 
 test-reset:
-	echo | curl -X POST -H 'Content-type: text/xml' -d @- http://192.168.0.37/cgi.sh?reset
+	echo | ${post}$c.reset
 
-gst-rtsp 264udp: 
+gst-rtsp 264udp udp2ser-asys2: 
 	make gst c=$@
  
 test-my-plugin:
@@ -61,7 +63,8 @@ vlc-rtsp:
 
 asys2:
 	make -C ${parentsdir}/../asys2
-	cp ${parentsdir}/../asys2/capfilter.so .
+	cp ${parentsdir}/../asys2/teacher.so .
+	cp ${parentsdir}/../asys2/udp2ser udp2ser
 	nc.traditional -u 192.168.0.37 1653 -q 0 <<<"q"
 
 gst: rebuild-gst-ti rebuild-rtsp rebuild-gst-alsasrc malve.so rtsp asys2
@@ -85,5 +88,5 @@ play-deca:
 #	gst-launch --gst-debug="filesink:9" filesrc location=a.264 ! h264parse ! filesink location=/dev/null
 
 clean:
-	rm -rf *.o *.so rtsp *.264 *.ts *.wav *.mp4 *.aac
+	rm -rf *.o *.so rtsp *.264 *.ts *.wav *.mp4 *.aac *.yuv
 

@@ -31,12 +31,22 @@ export DMAI_DEBUG=0
 	pipe="udpsrc port=1200 ! filesink buffer-mode=2 location=/dev/ttyS2"
 }
 
+[ "$1" = "udp2ser-asys2" ] && {
+	cd udp2ser
+	BINDPORT=1654 ./udp2ser
+	exit
+}
+
+
 [ "$1" = "tsudp" ] && {
 	debug="ti*:5,TI*:5,mpeg*:3"
 	pipe="$tisrc ! $vidcap ! $tienc ! mpegtsmux name=m ! fakesink alsasrc ! $audcap ! ffenc_mp2 ! m."
 	pipe="$tisrc ! $vidcap ! $tienc ! $clisink "
 	#udpsink host=127.0.0.1 port=1204"
 }
+
+export CAPFILTER=`pwd`/teacher.so
+export BINDPORT=1653
 
 [ "$1" = "264udp" ] && {
 	debug="malve:9,TI*:3"

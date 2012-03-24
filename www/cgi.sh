@@ -1,35 +1,44 @@
 #!/bin/sh
 
+cmd() {
+	echo $REQUEST_URI | grep -q $1
+}
+
 notify() { 
-	echo $1 | nc -u -c localhost 1653 
+	echo $1 | nc -u -c localhost $port
 }
 
 echo 'Content-Type: text/xml'
 echo 
 
-echo $REQUEST_URI | grep -q act && {
-	cat > ../act.xml
+cmd udp2ser && { dir=../udp2ser; port=1654; }
+cmd algo && { dir=../; port=1653; }
+[ "$dir" = "" ] && exit
+
+cmd act && {
+	echo port: $port
+	cat > $dir/act.xml
 	notify a
 }
-echo $REQUEST_URI | grep -q save && {
+cmd save && {
 	notify s
 }
-echo $REQUEST_URI | grep -q load && {
+cmd load && {
 	notify l
 }
-echo $REQUEST_URI | grep -q upload && {
-	cat > ../config.xml
+cmd upload && {
+	cat > $dir/config.xml
 	notify l
 }
-echo $REQUEST_URI | grep -q cur && {
+cmd cur && {
 	notify c
 	sleep 1
-	cat ../cur.xml
+	cat $dir/cur.xml
 }
-echo $REQUEST_URI | grep -q restart && {
+cmd restart && {
 	notify q
 }
-echo $REQUEST_URI | grep -q reset && {
+cmd reset && {
 	notify r
 }
 
