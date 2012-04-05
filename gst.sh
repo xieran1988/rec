@@ -21,6 +21,7 @@ nn="num-buffers=300"
 
 #export GST_DEBUG_DUMP_DOT_DIR=`pwd`/dot
 export DMAI_DEBUG=0
+export GST_PLUGIN_PATH=`pwd`
 
 [ "$1" = "test" ] && {
 	debug="ti*:3"
@@ -33,7 +34,9 @@ export DMAI_DEBUG=0
 
 [ "$1" = "udp2ser-asys2" ] && {
 	cd udp2ser
-	BINDPORT=1654 ./udp2ser
+	while true; do
+		BINDPORT=1654 /root/asys2/udp2ser
+	done
 	exit
 }
 
@@ -45,7 +48,7 @@ export DMAI_DEBUG=0
 	#udpsink host=127.0.0.1 port=1204"
 }
 
-export CAPFILTER=`pwd`/teacher.so
+export CAPFILTER=/root/asys2/teacher.so
 export BINDPORT=1653
 
 [ "$1" = "264udp" ] && {

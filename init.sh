@@ -1,6 +1,10 @@
 #!/bin/sh
 
-screen -dmS tsudp ./gst.sh tsudp 
-screen -dmS rtsp ./gst.sh gst-rtsp 
-screen -dmS ser ./gst.sh udp2ser
-ifconfig eth0 192.168.0.37 up
+grep release_zc /proc/cmdline && {
+	screen -dmS algo ./gst.sh 264udp 
+#	screen -dmS ser ./gst.sh udp2ser-asys2
+	screen -dmS ser ./gst.sh udp2ser
+	screen -dmS rtsp ./gst.sh gst-rtsp 
+	lighttpd -f lighttpd.conf
+}
+

@@ -1,22 +1,27 @@
 
 plat ?= a8
-test ?= telnet-simplefs-3730
+test ?= telnet-3730
 libs += gstreamer-0.10
 libs += zlib 
 libs +=	gstreamer-rtsp-0.10 
 libs +=	gst-rtsp-server-0.10
 libs +=	gstreamer-app-0.10
 libs +=	gstreamer-rtp-0.10 
-release_objs += rtsp gst.sh init.sh
+release_files += rtsp gst.sh init.sh lighttpd.conf www
 
 include ${parentsdir}/top.mk
 
-all: test-rtsp
+all: rtsp
 
-release: rtsp 
+screen:
+	$(call sh, screen -r $c)
 
-test-rtsp: rtsp
-	$(call sh, ./test-rtsp.sh)
+sysinit:
+	make -C ${parentsdir} poweroff-all
+	$(call sh, ./init.sh)
+	make screen c=algo
+	#xterm -e "make screen c=algo" &
+	#xterm -e "make screen c=ser" &
 
 $(eval $(call single-target,rtsp))
 $(eval $(call my-gst-plugin,valve,malve))
@@ -61,13 +66,8 @@ vlc-rtsp:
 	make -C ${parentsdir}/vlc
 	${parentsdir}/vlc/vlc -vvvv "rtsp://192.168.1.36:8554/test"
 
-asys2:
-	make -C ${parentsdir}/../asys2
-	cp ${parentsdir}/../asys2/teacher.so .
-	cp ${parentsdir}/../asys2/udp2ser udp2ser
-	nc.traditional -u 192.168.0.37 1653 -q 0 <<<"q"
-
-gst: rebuild-gst-ti rebuild-rtsp rebuild-gst-alsasrc malve.so rtsp asys2
+gst: malve.so rtsp 
+	make -C ${parentsdir} rebuild-gst-ti rebuild-rtsp rebuild-gst-alsasrc 
 	$(call sh, ./gst.sh $c)
 
 tswin:
@@ -88,5 +88,5 @@ play-deca:
 #	gst-launch --gst-debug="filesink:9" filesrc location=a.264 ! h264parse ! filesink location=/dev/null
 
 clean:
-	rm -rf *.o *.so rtsp *.264 *.ts *.wav *.mp4 *.aac *.yuv
+	rm -rf *.o *.so rtsp *.264 *.ts *.wav *.mp4 *.aac *.yuv act.xml default.xml cur.xml udp2ser/*
 
